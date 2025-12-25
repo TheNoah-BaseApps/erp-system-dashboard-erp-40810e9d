@@ -78,13 +78,34 @@ export async function PUT(request, { params }) {
     const authResult = await verifyAuth(request);
     
     if (!authResult.authenticated) {
+      console.error('PUT customer authentication failed:', authResult.error);
       return NextResponse.json(
         { success: false, error: authResult.error },
         { status: 401 }
       );
     }
 
-    const body = await request.json();
+    // Validate customer ID
+    if (!params.id) {
+      console.error('PUT customer error: Missing customer ID');
+      return NextResponse.json(
+        { success: false, error: 'Customer ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Parse and validate request body
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      console.error('PUT customer error: Invalid JSON body', parseError);
+      return NextResponse.json(
+        { success: false, error: 'Invalid request body' },
+        { status: 400 }
+      );
+    }
+
     const {
       customer_name,
       customer_code,
@@ -100,41 +121,78 @@ export async function PUT(request, { params }) {
       balance_risk_limit,
     } = body;
 
-    // Validate email format
+    // Validate required fields
+    if (!customer_name || !customer_code) {
+      console.error('PUT customer error: Missing required fields', { customer_name, customer_code });
+      return NextResponse.json(
+        { success: false, error: 'Customer name and customer code are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate email format if provided
     if (email && !/\S+@\S+\.\S+/.test(email)) {
+      console.error('PUT customer error: Invalid email format', { email });
       return NextResponse.json(
         { success: false, error: 'Invalid email format' },
         { status: 400 }
       );
     }
 
+    // Validate numeric fields if provided
+    if (payment_terms_limit !== undefined && payment_terms_limit !== null && isNaN(payment_terms_limit)) {
+      console.error('PUT customer error: Invalid payment_terms_limit', { payment_terms_limit });
+      return NextResponse.json(
+        { success: false, error: 'Payment terms limit must be a valid number' },
+        { status: 400 }
+      );
+    }
+
+    if (balance_risk_limit !== undefined && balance_risk_limit !== null && isNaN(balance_risk_limit)) {
+      console.error('PUT customer error: Invalid balance_risk_limit', { balance_risk_limit });
+      return NextResponse.json(
+        { success: false, error: 'Balance risk limit must be a valid number' },
+        { status: 400 }
+      );
+    }
+
+    // Update customer with proper parameter binding
     const result = await query(
       `UPDATE customers 
-       SET customer_name = $1, customer_code = $2, address = $3,
-           city_or_district = $4, sales_rep = $5, country = $6,
-           region_or_state = $7, telephone_number = $8, email = $9,
-           contact_person = $10, payment_terms_limit = $11,
-           balance_risk_limit = $12, updated_at = NOW()
+       SET customer_name = $1, 
+           customer_code = $2, 
+           address = $3,
+           city_or_district = $4, 
+           sales_rep = $5, 
+           country = $6,
+           region_or_state = $7, 
+           telephone_number = $8, 
+           email = $9,
+           contact_person = $10, 
+           payment_terms_limit = $11,
+           balance_risk_limit = $12, 
+           updated_at = NOW()
        WHERE id = $13
        RETURNING *`,
       [
         customer_name,
         customer_code,
-        address,
-        city_or_district,
-        sales_rep,
-        country,
-        region_or_state,
-        telephone_number,
-        email,
-        contact_person,
-        payment_terms_limit,
-        balance_risk_limit,
+        address || null,
+        city_or_district || null,
+        sales_rep || null,
+        country || null,
+        region_or_state || null,
+        telephone_number || null,
+        email || null,
+        contact_person || null,
+        payment_terms_limit || null,
+        balance_risk_limit || null,
         params.id,
       ]
     );
 
-    if (result.rows.length === 0) {
+    if (!result.rows || result.rows.length === 0) {
+      console.error('PUT customer error: Customer not found', { id: params.id });
       return NextResponse.json(
         { success: false, error: 'Customer not found' },
         { status: 404 }
@@ -144,11 +202,17 @@ export async function PUT(request, { params }) {
     return NextResponse.json({
       success: true,
       data: result.rows[0],
+      message: 'Customer updated successfully',
     });
   } catch (error) {
     console.error('Update customer error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      customerId: params?.id,
+    });
     return NextResponse.json(
-      { success: false, error: 'Failed to update customer' },
+      { success: false, error: 'Failed to update customer. Please check the data and try again.' },
       { status: 500 }
     );
   }

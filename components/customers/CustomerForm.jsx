@@ -31,9 +31,13 @@ export default function CustomerForm({ initialData, onSuccess }) {
 
   const validate = () => {
     const newErrors = {};
-    if (!formData.customer_name) newErrors.customer_name = 'Customer name is required';
-    if (!formData.customer_code) newErrors.customer_code = 'Customer code is required';
-    if (!formData.email) {
+    if (!formData.customer_name?.trim()) {
+      newErrors.customer_name = 'Customer name is required';
+    }
+    if (!formData.customer_code?.trim()) {
+      newErrors.customer_code = 'Customer code is required';
+    }
+    if (!formData.email?.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Invalid email format';
@@ -53,6 +57,7 @@ export default function CustomerForm({ initialData, onSuccess }) {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
+      toast.error('Please fix the validation errors');
       return;
     }
 
@@ -60,8 +65,15 @@ export default function CustomerForm({ initialData, onSuccess }) {
 
     try {
       const token = localStorage.getItem('auth_token');
-      const url = initialData ? `/api/customers/${initialData.id}` : '/api/customers';
-      const method = initialData ? 'PUT' : 'POST';
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      const isEdit = initialData && initialData.id;
+      const url = isEdit ? `/api/customers/${initialData.id}` : '/api/customers';
+      const method = isEdit ? 'PUT' : 'POST';
+
+      console.log(`Submitting ${method} request to ${url}`, formData);
 
       const response = await fetch(url, {
         method,
@@ -75,14 +87,18 @@ export default function CustomerForm({ initialData, onSuccess }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to save customer');
+        console.error('API error response:', data);
+        throw new Error(data.error || data.message || 'Failed to save customer');
       }
 
-      toast.success(initialData ? 'Customer updated successfully' : 'Customer created successfully');
-      onSuccess?.();
+      toast.success(isEdit ? 'Customer updated successfully' : 'Customer created successfully');
+      
+      if (onSuccess) {
+        onSuccess(data);
+      }
     } catch (err) {
       console.error('Error saving customer:', err);
-      toast.error(err.message);
+      toast.error(err.message || 'An error occurred while saving the customer');
     } finally {
       setLoading(false);
     }

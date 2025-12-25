@@ -11,8 +11,8 @@ export default function ProductCostForm({ initialData, onSuccess }) {
   const [products, setProducts] = useState([]);
   const [formData, setFormData] = useState({
     product_id: initialData?.product_id || '',
-    month: initialData?.month || '',
-    unit_cost: initialData?.unit_cost || '',
+    effective_date: initialData?.effective_date || '',
+    cost_amount: initialData?.cost_amount || '',
   });
   const [loading, setLoading] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -32,7 +32,9 @@ export default function ProductCostForm({ initialData, onSuccess }) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch products');
+        const errorData = await response.json();
+        console.error('Failed to fetch products:', errorData);
+        throw new Error(errorData.error || 'Failed to fetch products');
       }
 
       const data = await response.json();
@@ -41,7 +43,7 @@ export default function ProductCostForm({ initialData, onSuccess }) {
       }
     } catch (err) {
       console.error('Error fetching products:', err);
-      toast.error('Failed to load products');
+      toast.error(err.message || 'Failed to load products');
     } finally {
       setLoadingProducts(false);
     }
@@ -52,13 +54,43 @@ export default function ProductCostForm({ initialData, onSuccess }) {
     setErrors(prev => ({ ...prev, [field]: '' }));
   };
 
+  const isValidUUID = (uuid) => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+  };
+
+  const isValidDate = (dateString) => {
+    if (!dateString) return false;
+    const date = new Date(dateString);
+    return date instanceof Date && !isNaN(date.getTime());
+  };
+
   const validate = () => {
     const newErrors = {};
-    if (!formData.product_id) newErrors.product_id = 'Product is required';
-    if (!formData.month) newErrors.month = 'Month is required';
-    if (!formData.unit_cost || formData.unit_cost <= 0) {
-      newErrors.unit_cost = 'Unit cost must be positive';
+    
+    if (!formData.product_id) {
+      newErrors.product_id = 'Product is required';
+    } else if (!isValidUUID(formData.product_id)) {
+      newErrors.product_id = 'Invalid product selection';
     }
+    
+    if (!formData.effective_date) {
+      newErrors.effective_date = 'Effective date is required';
+    } else if (!isValidDate(formData.effective_date)) {
+      newErrors.effective_date = 'Invalid date format';
+    }
+    
+    if (!formData.cost_amount) {
+      newErrors.cost_amount = 'Cost amount is required';
+    } else {
+      const costNum = parseFloat(formData.cost_amount);
+      if (isNaN(costNum)) {
+        newErrors.cost_amount = 'Cost amount must be a valid number';
+      } else if (costNum <= 0) {
+        newErrors.cost_amount = 'Cost amount must be positive';
+      }
+    }
+    
     return newErrors;
   };
 
@@ -68,6 +100,9 @@ export default function ProductCostForm({ initialData, onSuccess }) {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
+      Object.values(validationErrors).forEach(error => {
+        toast.error(error);
+      });
       return;
     }
 
@@ -78,26 +113,36 @@ export default function ProductCostForm({ initialData, onSuccess }) {
       const url = initialData ? `/api/product-costs/${initialData.id}` : '/api/product-costs';
       const method = initialData ? 'PUT' : 'POST';
 
+      const payload = {
+        product_id: formData.product_id,
+        effective_date: formData.effective_date,
+        cost_amount: parseFloat(formData.cost_amount),
+      };
+
+      console.log('Submitting product cost data:', payload);
+
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to save cost entry');
+        console.error('API error response:', data);
+        throw new Error(data.error || data.message || 'Failed to save cost entry');
       }
 
+      console.log('Product cost saved successfully:', data);
       toast.success(initialData ? 'Cost entry updated successfully' : 'Cost entry created successfully');
       onSuccess?.();
     } catch (err) {
       console.error('Error saving cost entry:', err);
-      toast.error(err.message);
+      toast.error(err.message || 'An error occurred while saving the cost entry');
     } finally {
       setLoading(false);
     }
@@ -119,27 +164,27 @@ export default function ProductCostForm({ initialData, onSuccess }) {
         placeholder="Select product"
         error={errors.product_id}
         required
-        disabled={loading || loadingProducts || initialData}
+        disabled={loading || loadingProducts || !!initialData}
       />
 
       <FormInput
-        label="Month"
-        id="month"
-        type="month"
-        value={formData.month}
-        onChange={(e) => handleChange('month', e.target.value)}
-        error={errors.month}
+        label="Effective Date"
+        id="effective_date"
+        type="date"
+        value={formData.effective_date}
+        onChange={(e) => handleChange('effective_date', e.target.value)}
+        error={errors.effective_date}
         required
         disabled={loading}
       />
 
       <FormInput
-        label="Unit Cost"
-        id="unit_cost"
+        label="Cost Amount"
+        id="cost_amount"
         type="number"
-        value={formData.unit_cost}
-        onChange={(e) => handleChange('unit_cost', e.target.value)}
-        error={errors.unit_cost}
+        value={formData.cost_amount}
+        onChange={(e) => handleChange('cost_amount', e.target.value)}
+        error={errors.cost_amount}
         required
         disabled={loading}
         min="0"
