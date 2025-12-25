@@ -33,7 +33,16 @@ export default function EditProductCostPage() {
 
       const data = await response.json();
       if (data.success) {
-        setProductCost(data.data);
+        const processedData = { ...data.data };
+        
+        // Convert ISO timestamp to YYYY-MM format for the month input
+        if (processedData.month) {
+          const monthDate = new Date(processedData.month);
+          const monthStr = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+          processedData.month = monthStr;
+        }
+        
+        setProductCost(processedData);
       } else {
         throw new Error(data.error || 'Failed to fetch product cost');
       }
