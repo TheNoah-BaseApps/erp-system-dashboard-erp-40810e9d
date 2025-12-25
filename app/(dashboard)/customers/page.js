@@ -23,7 +23,6 @@ export default function CustomersPage() {
   const [customerToDelete, setCustomerToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [deleteId, setDeleteId] = useState(null);
 
   const handleDeleteClick = (customer) => {
     setCustomerToDelete(customer);
@@ -78,8 +77,7 @@ export default function CustomersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the customer "{customerToDelete?.name}". 
-              This action cannot be undone.
+              Are you sure you want to delete this customer? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

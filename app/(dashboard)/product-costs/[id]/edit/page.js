@@ -33,8 +33,12 @@ export default function EditProductCostPage() {
 
       const data = await response.json();
       if (data.success) {
-        // Transform month field from ISO string to YYYY-MM format
-        const monthValue = data.data.month ? data.data.month.substring(0, 7) : '';
+        // Transform month field from ISO string to YYYY-MM format for input type="month"
+        let monthValue = '';
+        if (data.data.month) {
+          const date = new Date(data.data.month);
+          monthValue = date.toISOString().substring(0, 7);
+        }
         
         setProductCost({
           ...data.data,

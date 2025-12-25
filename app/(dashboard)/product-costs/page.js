@@ -21,6 +21,7 @@ export default function ProductCostsPage() {
   const router = useRouter();
   const [deleteId, setDeleteId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -37,8 +38,7 @@ export default function ProductCostsPage() {
 
       toast.success('Product cost deleted successfully');
       setDeleteId(null);
-      // Trigger refetch in ProductCostTable component
-      window.location.reload();
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error deleting product cost:', error);
       toast.error('Failed to delete product cost');
@@ -60,19 +60,19 @@ export default function ProductCostsPage() {
         </Button>
       </div>
 
-      <ProductCostTable onDelete={setDeleteId} />
+      <ProductCostTable onDelete={setDeleteId} key={refreshTrigger} />
 
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this product cost entry.
+              Are you sure you want to delete this product cost entry? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+            <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {isDeleting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>

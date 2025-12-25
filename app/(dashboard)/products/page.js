@@ -24,20 +24,21 @@ export default function ProductsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [deleteId, setDeleteId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
 
   const handleDeleteClick = (productId) => {
-    setSelectedProductId(productId);
-    setDeleteDialogOpen(true);
+    setItemToDelete(productId);
+    setShowDeleteDialog(true);
   };
 
   const handleDelete = async () => {
-    if (!selectedProductId && !deleteId) return;
+    if (!itemToDelete) return;
 
-    const productIdToDelete = deleteId || selectedProductId;
     setIsDeleting(true);
 
     try {
-      const response = await fetch(`/api/products/${productIdToDelete}`, {
+      const response = await fetch(`/api/products/${itemToDelete}`, {
         method: 'DELETE',
       });
 
@@ -46,9 +47,8 @@ export default function ProductsPage() {
       }
 
       toast.success('Product deleted successfully');
-      setDeleteDialogOpen(false);
-      setSelectedProductId(null);
-      setDeleteId(null);
+      setShowDeleteDialog(false);
+      setItemToDelete(null);
       setRefreshKey(prev => prev + 1);
     } catch (error) {
       toast.error('Failed to delete product');
@@ -73,18 +73,17 @@ export default function ProductsPage() {
 
       <ProductTable key={refreshKey} onDeleteClick={handleDeleteClick} />
 
-      <AlertDialog open={deleteDialogOpen || deleteId !== null} onOpenChange={(open) => {
+      <AlertDialog open={showDeleteDialog} onOpenChange={(open) => {
         if (!open) {
-          setDeleteDialogOpen(false);
-          setDeleteId(null);
+          setShowDeleteDialog(false);
+          setItemToDelete(null);
         }
       }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the product
-              from your catalog.
+              Are you sure you want to delete this product? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
