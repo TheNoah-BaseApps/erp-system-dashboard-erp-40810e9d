@@ -108,10 +108,28 @@ export async function PUT(request, { params }) {
       unit,
       critical_stock_level,
       brand,
+      hsn_code,
+      description,
+      gst_percent,
+      sales_price,
+      opening_stock,
+      opening_stock_value,
+      current_stock,
+      low_stock_alert_qty,
+      reorder_qty,
+      location,
+      rack_number,
+      product_image,
+      supplier_name,
+      supplier_code,
+      product_status,
+      tax_preference,
+      exemption_reason,
+      intra_state_tax_rate,
     } = body;
 
     // Validate input
-    if (parseFloat(critical_stock_level) <= 0) {
+    if (critical_stock_level && parseFloat(critical_stock_level) <= 0) {
       return NextResponse.json(
         { success: false, error: 'Critical stock level must be positive' },
         { status: 400 }
@@ -121,9 +139,32 @@ export async function PUT(request, { params }) {
     // Update product
     const result = await query(
       `UPDATE products 
-       SET product_name = $1, product_code = $2, product_category = $3,
-           unit = $4, critical_stock_level = $5, brand = $6, updated_at = NOW()
-       WHERE id = $7
+       SET product_name = $1, 
+           product_code = $2, 
+           product_category = $3,
+           unit = $4, 
+           critical_stock_level = $5, 
+           brand = $6,
+           hsn_code = $7,
+           description = $8,
+           gst_percent = $9,
+           sales_price = $10,
+           opening_stock = $11,
+           opening_stock_value = $12,
+           current_stock = $13,
+           low_stock_alert_qty = $14,
+           reorder_qty = $15,
+           location = $16,
+           rack_number = $17,
+           product_image = $18,
+           supplier_name = $19,
+           supplier_code = $20,
+           product_status = $21,
+           tax_preference = $22,
+           exemption_reason = $23,
+           intra_state_tax_rate = $24,
+           updated_at = NOW()
+       WHERE id = $25
        RETURNING *`,
       [
         product_name,
@@ -132,6 +173,24 @@ export async function PUT(request, { params }) {
         unit,
         critical_stock_level,
         brand,
+        hsn_code,
+        description,
+        gst_percent,
+        sales_price,
+        opening_stock,
+        opening_stock_value,
+        current_stock,
+        low_stock_alert_qty,
+        reorder_qty,
+        location,
+        rack_number,
+        product_image,
+        supplier_name,
+        supplier_code,
+        product_status,
+        tax_preference,
+        exemption_reason,
+        intra_state_tax_rate,
         params.id,
       ]
     );
