@@ -6,6 +6,19 @@ import DataTable from '@/components/common/DataTable';
 import SearchBar from '@/components/common/SearchBar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function ProductCostTable() {
   const router = useRouter();
@@ -14,6 +27,8 @@ export default function ProductCostTable() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [costToDelete, setCostToDelete] = useState(null);
 
   useEffect(() => {
     fetchCosts();
@@ -59,6 +74,39 @@ export default function ProductCostTable() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!costToDelete) return;
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/product-costs/${costToDelete}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        toast.success('Cost record deleted');
+        fetchCosts();
+      } else {
+        toast.error('Failed to delete');
+      }
+    } catch (err) {
+      console.error('Error deleting cost:', err);
+      toast.error('Failed to delete');
+    } finally {
+      setDeleteDialogOpen(false);
+      setCostToDelete(null);
+    }
+  };
+
+  const openDeleteDialog = (costId, e) => {
+    e.stopPropagation();
+    setCostToDelete(costId);
+    setDeleteDialogOpen(true);
+  };
+
   const columns = [
     {
       accessorKey: 'product_code',
@@ -77,6 +125,20 @@ export default function ProductCostTable() {
       accessorKey: 'unit_cost',
       header: 'Unit Cost',
       cell: ({ row }) => `$${parseFloat(row.original.unit_cost).toFixed(2)}`,
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          onClick={(e) => openDeleteDialog(row.original.id, e)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      ),
     },
   ];
 
@@ -109,6 +171,21 @@ export default function ProductCostTable() {
         data={filteredCosts}
         onRowClick={(row) => router.push(`/product-costs/${row.id}/edit`)}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this cost record?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
