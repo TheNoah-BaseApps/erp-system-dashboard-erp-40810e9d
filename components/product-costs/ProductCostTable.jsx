@@ -107,7 +107,7 @@ export default function ProductCostTable() {
       <DataTable
         columns={columns}
         data={filteredCosts}
-        onRowClick={(row) => router.push(`/product-costs/${row.id}`)}
+        onRowClick={(row) => router.push(`/product-costs/${row.id}/edit`)}
       />
     </div>
   );

@@ -119,7 +119,7 @@ export default function ProductTable() {
       <DataTable
         columns={columns}
         data={filteredProducts}
-        onRowClick={(row) => router.push(`/products/${row.id}`)}
+        onRowClick={(row) => router.push(`/products/${row.id}/edit`)}
       />
     </div>
   );

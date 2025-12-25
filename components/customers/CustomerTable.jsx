@@ -124,7 +124,7 @@ export default function CustomerTable() {
       <DataTable
         columns={columns}
         data={filteredCustomers}
-        onRowClick={(row) => router.push(`/customers/${row.id}`)}
+        onRowClick={(row) => router.push(`/customers/${row.id}/edit`)}
       />
     </div>
   );

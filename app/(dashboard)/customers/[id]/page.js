@@ -31,7 +31,13 @@ export default function CustomerDetailPage() {
   useEffect(() => {
     const fetchCustomer = async () => {
       try {
+        setLoading(true);
         const token = localStorage.getItem('auth_token');
+        
+        if (!token) {
+          throw new Error('Authentication required');
+        }
+
         const response = await fetch(`/api/customers/${params.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -39,6 +45,9 @@ export default function CustomerDetailPage() {
         });
 
         if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error('Customer not found');
+          }
           throw new Error('Failed to fetch customer');
         }
 
@@ -51,12 +60,15 @@ export default function CustomerDetailPage() {
       } catch (err) {
         console.error('Error fetching customer:', err);
         setError(err.message);
+        toast.error(err.message);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCustomer();
+    if (params.id) {
+      fetchCustomer();
+    }
   }, [params.id]);
 
   const handleDelete = async () => {
@@ -90,7 +102,13 @@ export default function CustomerDetailPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-10" />
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
         <Skeleton className="h-64" />
       </div>
     );
@@ -98,9 +116,33 @@ export default function CustomerDetailPage() {
 
   if (error) {
     return (
-      <Alert variant="destructive">
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-3xl font-bold">Error</h1>
+        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  if (!customer) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-3xl font-bold">Customer Not Found</h1>
+        </div>
+        <Alert>
+          <AlertDescription>The requested customer could not be found.</AlertDescription>
+        </Alert>
+      </div>
     );
   }
 

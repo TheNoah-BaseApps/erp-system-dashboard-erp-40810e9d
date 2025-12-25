@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import FormInput from '@/components/common/FormInput';
 import FormSelect from '@/components/common/FormSelect';
@@ -23,17 +23,43 @@ const UNITS = [
   { value: 'BOX', label: 'Box' },
 ];
 
-export default function ProductForm({ initialData, onSuccess }) {
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+];
+
+export default function ProductForm({ initialData, isEdit, onSuccess }) {
   const [formData, setFormData] = useState({
-    product_name: initialData?.product_name || '',
-    product_code: initialData?.product_code || '',
-    product_category: initialData?.product_category || '',
-    unit: initialData?.unit || '',
-    critical_stock_level: initialData?.critical_stock_level || '',
-    brand: initialData?.brand || '',
+    product_name: '',
+    product_code: '',
+    description: '',
+    product_category: '',
+    quantity: '',
+    critical_stock_level: '',
+    unit_price: '',
+    unit: '',
+    brand: '',
+    status: 'active',
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (initialData && isEdit) {
+      setFormData({
+        product_name: initialData.product_name || initialData.name || '',
+        product_code: initialData.product_code || initialData.sku || '',
+        description: initialData.description || '',
+        product_category: initialData.product_category || initialData.category || '',
+        quantity: initialData.quantity || initialData.stock_quantity || '',
+        critical_stock_level: initialData.critical_stock_level || initialData.min_stock_level || initialData.reorder_level || '',
+        unit_price: initialData.unit_price || '',
+        unit: initialData.unit || '',
+        brand: initialData.brand || initialData.supplier_name || '',
+        status: initialData.status || 'active',
+      });
+    }
+  }, [initialData, isEdit]);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -50,6 +76,12 @@ export default function ProductForm({ initialData, onSuccess }) {
       newErrors.critical_stock_level = 'Critical stock level must be positive';
     }
     if (!formData.brand) newErrors.brand = 'Brand is required';
+    if (formData.unit_price && formData.unit_price < 0) {
+      newErrors.unit_price = 'Unit price must be positive';
+    }
+    if (formData.quantity && formData.quantity < 0) {
+      newErrors.quantity = 'Quantity must be positive';
+    }
     return newErrors;
   };
 
@@ -66,8 +98,9 @@ export default function ProductForm({ initialData, onSuccess }) {
 
     try {
       const token = localStorage.getItem('auth_token');
-      const url = initialData ? `/api/products/${initialData.id}` : '/api/products';
-      const method = initialData ? 'PUT' : 'POST';
+      const productId = initialData?.product_id || initialData?.id;
+      const url = isEdit && productId ? `/api/products/${productId}` : '/api/products';
+      const method = isEdit ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
         method,
@@ -84,7 +117,7 @@ export default function ProductForm({ initialData, onSuccess }) {
         throw new Error(data.error || 'Failed to save product');
       }
 
-      toast.success(initialData ? 'Product updated successfully' : 'Product created successfully');
+      toast.success(isEdit ? 'Product updated successfully' : 'Product created successfully');
       onSuccess?.();
     } catch (err) {
       console.error('Error saving product:', err);
@@ -107,12 +140,21 @@ export default function ProductForm({ initialData, onSuccess }) {
       />
 
       <FormInput
-        label="Product Code"
+        label="Product Code / SKU"
         id="product_code"
         value={formData.product_code}
         onChange={(e) => handleChange('product_code', e.target.value)}
         error={errors.product_code}
         required
+        disabled={loading}
+      />
+
+      <FormInput
+        label="Description"
+        id="description"
+        value={formData.description}
+        onChange={(e) => handleChange('description', e.target.value)}
+        error={errors.description}
         disabled={loading}
       />
 
@@ -128,6 +170,43 @@ export default function ProductForm({ initialData, onSuccess }) {
         disabled={loading}
       />
 
+      <FormInput
+        label="Quantity"
+        id="quantity"
+        type="number"
+        value={formData.quantity}
+        onChange={(e) => handleChange('quantity', e.target.value)}
+        error={errors.quantity}
+        disabled={loading}
+        min="0"
+        step="0.01"
+      />
+
+      <FormInput
+        label="Critical Stock Level / Min Stock Level"
+        id="critical_stock_level"
+        type="number"
+        value={formData.critical_stock_level}
+        onChange={(e) => handleChange('critical_stock_level', e.target.value)}
+        error={errors.critical_stock_level}
+        required
+        disabled={loading}
+        min="0"
+        step="0.01"
+      />
+
+      <FormInput
+        label="Unit Price"
+        id="unit_price"
+        type="number"
+        value={formData.unit_price}
+        onChange={(e) => handleChange('unit_price', e.target.value)}
+        error={errors.unit_price}
+        disabled={loading}
+        min="0"
+        step="0.01"
+      />
+
       <FormSelect
         label="Unit"
         id="unit"
@@ -141,25 +220,23 @@ export default function ProductForm({ initialData, onSuccess }) {
       />
 
       <FormInput
-        label="Critical Stock Level"
-        id="critical_stock_level"
-        type="number"
-        value={formData.critical_stock_level}
-        onChange={(e) => handleChange('critical_stock_level', e.target.value)}
-        error={errors.critical_stock_level}
-        required
-        disabled={loading}
-        min="0"
-        step="0.01"
-      />
-
-      <FormInput
         label="Brand"
         id="brand"
         value={formData.brand}
         onChange={(e) => handleChange('brand', e.target.value)}
         error={errors.brand}
         required
+        disabled={loading}
+      />
+
+      <FormSelect
+        label="Status"
+        id="status"
+        options={STATUS_OPTIONS}
+        value={formData.status}
+        onValueChange={(value) => handleChange('status', value)}
+        placeholder="Select status"
+        error={errors.status}
         disabled={loading}
       />
 
@@ -171,7 +248,7 @@ export default function ProductForm({ initialData, onSuccess }) {
               Saving...
             </>
           ) : (
-            initialData ? 'Update Product' : 'Create Product'
+            isEdit ? 'Update Product' : 'Create Product'
           )}
         </Button>
       </div>

@@ -31,7 +31,13 @@ export default function ProductDetailPage() {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
+        setLoading(true);
         const token = localStorage.getItem('auth_token');
+        
+        if (!token) {
+          throw new Error('Not authenticated');
+        }
+
         const response = await fetch(`/api/products/${params.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -39,30 +45,40 @@ export default function ProductDetailPage() {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch product');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to fetch product');
         }
 
         const data = await response.json();
         if (data.success) {
           setProduct(data.data);
+          setError(null);
         } else {
           throw new Error(data.error || 'Invalid response');
         }
       } catch (err) {
         console.error('Error fetching product:', err);
         setError(err.message);
+        toast.error(`Failed to load product: ${err.message}`);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProduct();
+    if (params.id) {
+      fetchProduct();
+    }
   }, [params.id]);
 
   const handleDelete = async () => {
     setDeleting(true);
     try {
       const token = localStorage.getItem('auth_token');
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
       const response = await fetch(`/api/products/${params.id}`, {
         method: 'DELETE',
         headers: {
@@ -80,7 +96,7 @@ export default function ProductDetailPage() {
       router.push('/products');
     } catch (err) {
       console.error('Error deleting product:', err);
-      toast.error(err.message);
+      toast.error(`Failed to delete product: ${err.message}`);
     } finally {
       setDeleting(false);
       setShowDeleteDialog(false);
@@ -90,7 +106,13 @@ export default function ProductDetailPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-10" />
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
         <Skeleton className="h-64" />
       </div>
     );
@@ -98,9 +120,39 @@ export default function ProductDetailPage() {
 
   if (error) {
     return (
-      <Alert variant="destructive">
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-3xl font-bold">Product Details</h1>
+        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+        <Button onClick={() => router.push('/products')}>
+          Back to Products
+        </Button>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-3xl font-bold">Product Details</h1>
+        </div>
+        <Alert>
+          <AlertDescription>Product not found</AlertDescription>
+        </Alert>
+        <Button onClick={() => router.push('/products')}>
+          Back to Products
+        </Button>
+      </div>
     );
   }
 
@@ -135,12 +187,16 @@ export default function ProductDetailPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the product.
+              This action cannot be undone. This will permanently delete the product &quot;{product?.product_name}&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleting}>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete} 
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               {deleting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>

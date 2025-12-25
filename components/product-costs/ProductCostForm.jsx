@@ -10,17 +10,28 @@ import { toast } from 'sonner';
 export default function ProductCostForm({ initialData, onSuccess }) {
   const [products, setProducts] = useState([]);
   const [formData, setFormData] = useState({
-    product_id: initialData?.product_id || '',
-    effective_date: initialData?.effective_date || '',
-    cost_amount: initialData?.cost_amount || '',
+    product_id: '',
+    effective_date: '',
+    cost_amount: '',
   });
   const [loading, setLoading] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [errors, setErrors] = useState({});
+  const isEdit = !!initialData;
 
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        product_id: initialData.product_id?.toString() || '',
+        effective_date: initialData.effective_date || '',
+        cost_amount: initialData.cost_amount?.toString() || '',
+      });
+    }
+  }, [initialData]);
 
   const fetchProducts = async () => {
     try {
@@ -110,8 +121,8 @@ export default function ProductCostForm({ initialData, onSuccess }) {
 
     try {
       const token = localStorage.getItem('auth_token');
-      const url = initialData ? `/api/product-costs/${initialData.id}` : '/api/product-costs';
-      const method = initialData ? 'PUT' : 'POST';
+      const url = isEdit ? `/api/product-costs/${initialData.id}` : '/api/product-costs';
+      const method = isEdit ? 'PUT' : 'POST';
 
       const payload = {
         product_id: formData.product_id,
@@ -138,7 +149,7 @@ export default function ProductCostForm({ initialData, onSuccess }) {
       }
 
       console.log('Product cost saved successfully:', data);
-      toast.success(initialData ? 'Cost entry updated successfully' : 'Cost entry created successfully');
+      toast.success(isEdit ? 'Cost entry updated successfully' : 'Cost entry created successfully');
       onSuccess?.();
     } catch (err) {
       console.error('Error saving cost entry:', err);
@@ -164,7 +175,7 @@ export default function ProductCostForm({ initialData, onSuccess }) {
         placeholder="Select product"
         error={errors.product_id}
         required
-        disabled={loading || loadingProducts || !!initialData}
+        disabled={loading || loadingProducts || isEdit}
       />
 
       <FormInput
@@ -199,7 +210,7 @@ export default function ProductCostForm({ initialData, onSuccess }) {
               Saving...
             </>
           ) : (
-            initialData ? 'Update Cost Entry' : 'Create Cost Entry'
+            isEdit ? 'Update Cost Entry' : 'Create Cost Entry'
           )}
         </Button>
       </div>

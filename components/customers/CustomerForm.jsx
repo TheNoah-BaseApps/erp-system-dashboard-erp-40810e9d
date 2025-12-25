@@ -1,28 +1,47 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import FormInput from '@/components/common/FormInput';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function CustomerForm({ initialData, onSuccess }) {
+export default function CustomerForm({ initialData, isEdit, onSuccess }) {
   const [formData, setFormData] = useState({
-    customer_name: initialData?.customer_name || '',
-    customer_code: initialData?.customer_code || '',
-    address: initialData?.address || '',
-    city_or_district: initialData?.city_or_district || '',
-    sales_rep: initialData?.sales_rep || '',
-    country: initialData?.country || '',
-    region_or_state: initialData?.region_or_state || '',
-    telephone_number: initialData?.telephone_number || '',
-    email: initialData?.email || '',
-    contact_person: initialData?.contact_person || '',
-    payment_terms_limit: initialData?.payment_terms_limit || '',
-    balance_risk_limit: initialData?.balance_risk_limit || '',
+    customer_name: '',
+    customer_code: '',
+    address: '',
+    city_or_district: '',
+    sales_rep: '',
+    country: '',
+    region_or_state: '',
+    telephone_number: '',
+    email: '',
+    contact_person: '',
+    payment_terms_limit: '',
+    balance_risk_limit: '',
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        customer_name: initialData.customer_name || '',
+        customer_code: initialData.customer_code || '',
+        address: initialData.address || '',
+        city_or_district: initialData.city_or_district || '',
+        sales_rep: initialData.sales_rep || '',
+        country: initialData.country || '',
+        region_or_state: initialData.region_or_state || '',
+        telephone_number: initialData.telephone_number || '',
+        email: initialData.email || '',
+        contact_person: initialData.contact_person || '',
+        payment_terms_limit: initialData.payment_terms_limit || '',
+        balance_risk_limit: initialData.balance_risk_limit || '',
+      });
+    }
+  }, [initialData]);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -69,7 +88,6 @@ export default function CustomerForm({ initialData, onSuccess }) {
         throw new Error('Authentication token not found');
       }
 
-      const isEdit = initialData && initialData.id;
       const url = isEdit ? `/api/customers/${initialData.id}` : '/api/customers';
       const method = isEdit ? 'PUT' : 'POST';
 
@@ -235,7 +253,7 @@ export default function CustomerForm({ initialData, onSuccess }) {
               Saving...
             </>
           ) : (
-            initialData ? 'Update Customer' : 'Create Customer'
+            isEdit ? 'Update Customer' : 'Create Customer'
           )}
         </Button>
       </div>

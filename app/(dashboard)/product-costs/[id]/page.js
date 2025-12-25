@@ -32,27 +32,44 @@ export default function ProductCostDetailPage() {
 
   useEffect(() => {
     const fetchCost = async () => {
+      if (!params.id) {
+        setError('Cost ID is missing');
+        setLoading(false);
+        return;
+      }
+
       try {
+        setLoading(true);
+        setError(null);
+        
         const token = localStorage.getItem('auth_token');
+        if (!token) {
+          throw new Error('Authentication required');
+        }
+
         const response = await fetch(`/api/product-costs/${params.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
           },
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch cost entry');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
-        if (data.success) {
+        
+        if (data.success && data.data) {
           setCost(data.data);
         } else {
-          throw new Error(data.error || 'Invalid response');
+          throw new Error(data.error || 'Failed to load cost entry');
         }
       } catch (err) {
         console.error('Error fetching cost:', err);
-        setError(err.message);
+        setError(err.message || 'Failed to load cost entry');
+        toast.error(err.message || 'Failed to load cost entry');
       } finally {
         setLoading(false);
       }
@@ -65,10 +82,15 @@ export default function ProductCostDetailPage() {
     setDeleting(true);
     try {
       const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
       const response = await fetch(`/api/product-costs/${params.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
       });
 
@@ -82,7 +104,7 @@ export default function ProductCostDetailPage() {
       router.push('/product-costs');
     } catch (err) {
       console.error('Error deleting cost:', err);
-      toast.error(err.message);
+      toast.error(err.message || 'Failed to delete cost entry');
     } finally {
       setDeleting(false);
       setShowDeleteDialog(false);
@@ -90,23 +112,82 @@ export default function ProductCostDetailPage() {
   };
 
   const handleSuccess = () => {
+    toast.success('Cost entry updated successfully');
     router.push('/product-costs');
   };
 
   if (loading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-64" />
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-10 rounded" />
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-56" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   if (error) {
     return (
-      <Alert variant="destructive">
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Edit Cost Entry</h1>
+          </div>
+        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+        <div className="flex gap-2">
+          <Button onClick={() => router.back()} variant="outline">
+            Go Back
+          </Button>
+          <Button onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!cost) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Edit Cost Entry</h1>
+          </div>
+        </div>
+        <Alert>
+          <AlertDescription>Cost entry not found</AlertDescription>
+        </Alert>
+        <Button onClick={() => router.back()} variant="outline">
+          Go Back
+        </Button>
+      </div>
     );
   }
 
@@ -134,7 +215,7 @@ export default function ProductCostDetailPage() {
           <CardDescription>Update the cost entry details</CardDescription>
         </CardHeader>
         <CardContent>
-          <ProductCostForm initialData={cost} onSuccess={handleSuccess} />
+          <ProductCostForm initialData={cost} isEdit={true} onSuccess={handleSuccess} />
         </CardContent>
       </Card>
 
@@ -149,7 +230,7 @@ export default function ProductCostDetailPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} disabled={deleting}>
               {deleting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
