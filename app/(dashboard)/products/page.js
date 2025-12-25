@@ -22,6 +22,8 @@ export default function ProductsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [deleteId, setDeleteId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDeleteClick = (productId) => {
     setSelectedProductId(productId);
@@ -29,10 +31,13 @@ export default function ProductsPage() {
   };
 
   const handleDelete = async () => {
-    if (!selectedProductId) return;
+    if (!selectedProductId && !deleteId) return;
+
+    const productIdToDelete = deleteId || selectedProductId;
+    setIsDeleting(true);
 
     try {
-      const response = await fetch(`/api/products/${selectedProductId}`, {
+      const response = await fetch(`/api/products/${productIdToDelete}`, {
         method: 'DELETE',
       });
 
@@ -43,10 +48,13 @@ export default function ProductsPage() {
       toast.success('Product deleted successfully');
       setDeleteDialogOpen(false);
       setSelectedProductId(null);
+      setDeleteId(null);
       setRefreshKey(prev => prev + 1);
     } catch (error) {
       toast.error('Failed to delete product');
       console.error('Error deleting product:', error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -65,7 +73,12 @@ export default function ProductsPage() {
 
       <ProductTable key={refreshKey} onDeleteClick={handleDeleteClick} />
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog open={deleteDialogOpen || deleteId !== null} onOpenChange={(open) => {
+        if (!open) {
+          setDeleteDialogOpen(false);
+          setDeleteId(null);
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -75,9 +88,13 @@ export default function ProductsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

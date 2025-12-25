@@ -28,9 +28,49 @@
  *     tags: [Customers]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The customer ID
  *     responses:
  *       200:
  *         description: Customer deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: Customer not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 error:
+ *                   type: string
+ *       500:
+ *         description: Failed to delete customer
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 error:
+ *                   type: string
  */
 
 import { NextResponse } from 'next/server';
@@ -229,9 +269,11 @@ export async function DELETE(request, { params }) {
       );
     }
 
+    const id = params.id;
+
     const result = await query(
-      'DELETE FROM customers WHERE id = $1 RETURNING id',
-      [params.id]
+      'DELETE FROM customers WHERE id = $1 RETURNING *',
+      [id]
     );
 
     if (result.rows.length === 0) {
@@ -243,6 +285,7 @@ export async function DELETE(request, { params }) {
 
     return NextResponse.json({
       success: true,
+      data: result.rows[0],
       message: 'Customer deleted successfully',
     });
   } catch (error) {

@@ -43,6 +43,10 @@
  *     responses:
  *       200:
  *         description: Product deleted successfully
+ *       404:
+ *         description: Product not found
+ *       500:
+ *         description: Failed to delete product
  */
 
 import { NextResponse } from 'next/server';
@@ -163,23 +167,11 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    // Check if product has associated cost entries
-    const costCheck = await query(
-      'SELECT id FROM product_costs WHERE product_id = $1 LIMIT 1',
-      [params.id]
-    );
+    const id = params.id;
 
-    if (costCheck.rows.length > 0) {
-      return NextResponse.json(
-        { success: false, error: 'Cannot delete product with associated cost entries' },
-        { status: 400 }
-      );
-    }
-
-    // Delete product
     const result = await query(
-      'DELETE FROM products WHERE id = $1 RETURNING id',
-      [params.id]
+      'DELETE FROM products WHERE id = $1 RETURNING *',
+      [id]
     );
 
     if (result.rows.length === 0) {
@@ -191,7 +183,7 @@ export async function DELETE(request, { params }) {
 
     return NextResponse.json({
       success: true,
-      message: 'Product deleted successfully',
+      data: result.rows[0],
     });
   } catch (error) {
     console.error('Delete product error:', error);

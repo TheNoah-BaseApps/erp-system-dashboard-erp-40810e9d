@@ -23,6 +23,7 @@ export default function CustomersPage() {
   const [customerToDelete, setCustomerToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [deleteId, setDeleteId] = useState(null);
 
   const handleDeleteClick = (customer) => {
     setCustomerToDelete(customer);

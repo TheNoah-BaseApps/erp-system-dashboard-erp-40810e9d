@@ -28,9 +28,47 @@
  *     tags: [Product Costs]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product cost ID
  *     responses:
  *       200:
  *         description: Product cost deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *       404:
+ *         description: Product cost not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 error:
+ *                   type: string
+ *       500:
+ *         description: Failed to delete product cost
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 error:
+ *                   type: string
  */
 
 import { NextResponse } from 'next/server';
@@ -133,9 +171,11 @@ export async function DELETE(request, { params }) {
       );
     }
 
+    const { id } = params;
+
     const result = await query(
-      'DELETE FROM product_costs WHERE id = $1 RETURNING id',
-      [params.id]
+      'DELETE FROM product_costs WHERE id = $1 RETURNING *',
+      [id]
     );
 
     if (result.rows.length === 0) {
@@ -147,7 +187,7 @@ export async function DELETE(request, { params }) {
 
     return NextResponse.json({
       success: true,
-      message: 'Product cost deleted successfully',
+      data: result.rows[0],
     });
   } catch (error) {
     console.error('Delete product cost error:', error);
